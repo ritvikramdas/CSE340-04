@@ -96,6 +96,22 @@ struct StatementNode * parse_whileStmt(){
     struct StatementNode * s = new StatementNode();
     lexer.GetToken();
     struct IfStatement* ifStmt = parse_condition();
+    s->type = IF_STMT;
+    s->if_stmt = ifStmt;
+    struct StatementNode * sb = parse_body();
+    struct StatementNode * go = new StatementNode();
+    struct StatementNode * no = new StatementNode();
+    go->type = GOTO_STMT;
+    no->type = NOOP_STMT;
+    go->goto_stmt = new GotoStatement();
+    go->goto_stmt->target = s;
+    s->if_stmt->true_branch = sb;
+    s->if_stmt->false_branch = no;
+    s->next = no;
+    while(sb->next != NULL){
+        sb = sb->next;
+    }
+    sb->next = go;
     return s;
 }
 
