@@ -56,12 +56,57 @@ struct ValueNode* parse_primary(){
     }
 }
 
-void parse_case(){
-
+struct StatementNode * parse_case(struct ValueNode* id,  struct StatementNode * go){
+    lexer.GetToken();
+    Token t = lexer.GetToken();
+    struct ValueNode* num = getNum(t.lexeme);
+    lexer.GetToken();
+    //copied
+    struct StatementNode * s1 = new StatementNode();
+    struct IfStatement* if_stmt1 = new IfStatement();
+    if_stmt1->condition_operand1 = id;
+    if_stmt1->condition_operand2 = num;
+    if_stmt1->condition_op = CONDITION_NOTEQUAL;
+    s1->type = IF_STMT;
+    s1->if_stmt = if_stmt1;
+    struct StatementNode * sb = parse_body();
+    struct StatementNode * no = new StatementNode();
+    no->type = NOOP_STMT;
+    s1->if_stmt->false_branch = sb;
+    s1->if_stmt->true_branch = no;
+    s1->next = no;
+    while(sb->next != NULL){
+        sb = sb->next;
+    }
+    struct StatementNode * gostmt = new StatementNode();
+    gostmt->type = GOTO_STMT;
+    gostmt->goto_stmt = new GotoStatement();
+    gostmt->goto_stmt->target = go;
+    sb->next = gostmt;
+    sb = sb->next;
+    sb->next = no;
+    //copied
+    return s1;
 }
 
-void parse_caseList(){
+struct StatementNode * parse_caseList(struct ValueNode* id, struct StatementNode * go){
+    struct StatementNode * case1 = parse_case(id, go);
+    Token t = lexer.GetToken();
+    if (t.token_type == CASE){
+        lexer.UngetToken(t);
+        struct StatementNode *case2= parse_caseList(id, go);
+        case1->next->next = case2;
+    }
+    else{
+        lexer.UngetToken(t);
+    }
+    return case1;
+}
 
+struct StatementNode * parse_defaultCase(){
+    lexer.GetToken();
+    struct StatementNode * body = parse_body();
+    return body;
 }
 
 struct IfStatement* parse_condition(){
@@ -115,7 +160,30 @@ struct StatementNode * parse_forStmt(){
 }
 
 struct StatementNode * parse_switchStmt(){
-    struct StatementNode * s = new StatementNode();
+    lexer.GetToken();
+    Token t = lexer.GetToken();
+    struct ValueNode* id = getValueNode(t.lexeme);
+    struct StatementNode * no = new StatementNode();
+    no->type = NOOP_STMT;
+    lexer.GetToken();
+    struct StatementNode * s = parse_caseList(id, no);
+    struct StatementNode * s1 =s;
+    while(s1->next != NULL){
+        s1 = s1->next;
+    }
+    Token t1 = lexer.GetToken();
+    if (t1.token_type == DEFAULT){
+        struct StatementNode * def = parse_defaultCase();
+        s1->next = def;
+    }
+    else{
+        lexer.UngetToken(t1);
+    }
+    while(s1->next != NULL){
+        s1 = s1->next;
+    }
+    s1->next = no;
+    lexer.GetToken();
     return s;
 }
 
@@ -241,9 +309,9 @@ struct StatementNode * parse_stmt(){
         return parse_printStmt();
     }
     else{
-        cout << reserve[t.token_type] << endl;
+        cout << reserve[t.token_type] << t.line_no << endl;
+        return NULL;
     }
-    return NULL;
 }
 
 struct StatementNode * parse_stmtList(){
@@ -253,7 +321,16 @@ struct StatementNode * parse_stmtList(){
         lexer.UngetToken(t);
         struct StatementNode *next = parse_stmtList();
         if (stmt->type == IF_STMT){
-            stmt->next->next = next;
+            if(stmt->next->type == NOOP_STMT){
+                struct StatementNode *stmt1 = stmt;
+                while(stmt1->next != NULL){
+                    stmt1 = stmt1->next;
+                }
+                stmt1->next = next;
+            }
+            else{
+                stmt->next->next = next;
+            }
         }
         else if (stmt->next != NULL){
             if(stmt->next->type == IF_STMT){

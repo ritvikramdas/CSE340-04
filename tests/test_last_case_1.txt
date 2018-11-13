@@ -1,0 +1,23 @@
+i,a,b,c;
+{
+	i = 5;
+	a = 1;
+	b = 2;
+	c = 3;
+	SWITCH i
+	{
+		CASE 5:
+		{
+			print a;
+		}
+		CASE 10:
+		{
+			print b;
+		}
+		DEFAULT:
+		{
+			print c;
+		}
+	}
+	print i;
+}
