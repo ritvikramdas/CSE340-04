@@ -1,0 +1,7 @@
+__MACOSX/
+a.out
+a.out.dSYM/
+cmake-build-debug/
+.DS_Store
+.idea/
+CMakeLists.txt
