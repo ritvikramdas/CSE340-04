@@ -10,6 +10,7 @@
 using namespace std;
 LexicalAnalyzer lexer;
 struct StatementNode * parse_body();
+struct StatementNode * parse_assignStmt();
 vector<struct ValueNode*> valueNodes;
 string reserve[] = { "END_OF_FILE",
     "VAR", "FOR", "IF", "WHILE", "SWITCH", "CASE", "DEFAULT", "PRINT", "ARRAY",
@@ -83,8 +84,34 @@ struct IfStatement* parse_condition(){
 }
 
 struct StatementNode * parse_forStmt(){
-    struct StatementNode * s = new StatementNode();
-    return s;
+    lexer.GetToken();
+    lexer.GetToken();
+    struct StatementNode *ass1 = parse_assignStmt();
+    struct StatementNode *s = new StatementNode();
+    struct IfStatement* ifstmt = parse_condition();
+    ass1->next = s;
+    s->type = IF_STMT;
+    s->if_stmt = ifstmt;
+    lexer.GetToken();
+    struct StatementNode *ass2 = parse_assignStmt();
+    lexer.GetToken();
+    struct StatementNode *body = parse_body();
+    struct StatementNode * go = new StatementNode();
+    struct StatementNode * no = new StatementNode();
+    go->next = no;
+    go->type = GOTO_STMT;
+    no->type = NOOP_STMT;
+    go->goto_stmt = new GotoStatement();
+    go->goto_stmt->target = s;
+    s->if_stmt->true_branch = body;
+    s->if_stmt->false_branch = no;
+    s->next = no;
+    while(body->next != NULL){
+        body = body->next;
+    }
+    body->next = ass2;
+    ass2->next = go;
+    return ass1;
 }
 
 struct StatementNode * parse_switchStmt(){
@@ -103,6 +130,7 @@ struct StatementNode * parse_whileStmt(){
     struct StatementNode * no = new StatementNode();
     go->type = GOTO_STMT;
     no->type = NOOP_STMT;
+    go->next = no;
     go->goto_stmt = new GotoStatement();
     go->goto_stmt->target = s;
     s->if_stmt->true_branch = sb;
@@ -212,6 +240,10 @@ struct StatementNode * parse_stmt(){
     else if (t.lexeme == "print"){
         return parse_printStmt();
     }
+    else{
+        cout << reserve[t.token_type] << endl;
+    }
+    return NULL;
 }
 
 struct StatementNode * parse_stmtList(){
@@ -222,6 +254,11 @@ struct StatementNode * parse_stmtList(){
         struct StatementNode *next = parse_stmtList();
         if (stmt->type == IF_STMT){
             stmt->next->next = next;
+        }
+        else if (stmt->next != NULL){
+            if(stmt->next->type == IF_STMT){
+                stmt->next->next->next = next;
+            }
         }
         else{
             stmt->next = next;

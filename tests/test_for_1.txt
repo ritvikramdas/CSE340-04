@@ -1,0 +1,10 @@
+i,a;
+{
+a=10;
+FOR (i=1;i<5;i=i+1;){
+	IF i>3 {	
+print i;
+}
+}
+print i;
+}
